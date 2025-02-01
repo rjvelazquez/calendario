@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { db } from './firebaseConfig';
 import moment from 'moment-timezone';
-import { Modal, Box, Typography, Button, TextField, MenuItem, Select, InputLabel, FormControl, FormHelperText } from '@mui/material';
+import { Modal, Box, Typography, Button, TextField, MenuItem, Select, InputLabel, FormControl, FormHelperText, IconButton, Divider } from '@mui/material';
+import DeleteIcon from '@mui/icons-material/Delete';
+import CloseIcon from '@mui/icons-material/Close';
+import SaveIcon from '@mui/icons-material/Save';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
 
 const LoanForm = ({ selectedDate, closeModal, isOpen, selectedEvent }) => {
@@ -12,41 +15,58 @@ const LoanForm = ({ selectedDate, closeModal, isOpen, selectedEvent }) => {
   const [startTime, setStartTime] = useState(selectedEvent ? moment(selectedEvent.start).tz('America/Puerto_Rico').format('HH:mm') : '');
   const [endDate, setEndDate] = useState(selectedEvent ? moment(selectedEvent.end).tz('America/Puerto_Rico').format('YYYY-MM-DD') : '');
   const [endTime, setEndTime] = useState(selectedEvent ? moment(selectedEvent.end).tz('America/Puerto_Rico').format('HH:mm') : '');
+  const [contribution, setContribution] = useState(selectedEvent && selectedEvent.extendedProps ? selectedEvent.extendedProps.contribution : '');
+  const [file, setFile] = useState(null);
 
   useEffect(() => {
     if (selectedDate) {
       const date = moment(selectedDate).tz('America/Puerto_Rico');
-      setStartDate(date.format('YYYY-MM-DD'));
-      setStartTime(date.format('HH:mm'));
-      setEndDate(date.format('YYYY-MM-DD'));
-      setEndTime(date.add(1, 'hour').format('HH:mm'));
+      if (!selectedEvent || !selectedEvent.id) {
+        setStartDate(date.format('YYYY-MM-DD'));
+        const currentTime = moment().tz('America/Puerto_Rico');
+        setStartTime(currentTime.format('HH:mm'));
+        const endTime = moment(currentTime).add(30, 'minutes');
+        setEndDate(date.format('YYYY-MM-DD'));
+        setEndTime(endTime.format('HH:mm'));
+      }
     }
-  }, [selectedDate]);
-  const [contribution, setContribution] = useState(selectedEvent && selectedEvent.extendedProps ? selectedEvent.extendedProps.contribution : '');
+  }, [selectedDate, selectedEvent]);
+    
   const [abogados, setAbogados] = useState([]);
   const [procesadoras, setProcesadoras] = useState([]);
   const [originadores, setOriginadores] = useState([]);
   const [selectedAbogado, setSelectedAbogado] = useState(selectedEvent && selectedEvent.extendedProps ? selectedEvent.extendedProps.abogado : '');
   const [selectedProcesadora, setSelectedProcesadora] = useState(selectedEvent && selectedEvent.extendedProps ? selectedEvent.extendedProps.procesadora : '');
   const [selectedOriginador, setSelectedOriginador] = useState(selectedEvent && selectedEvent.extendedProps ? selectedEvent.extendedProps.originador : '');
-  const [file, setFile] = useState(null);
-  const [fileLoaded, setFileLoaded] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
-      const abogadosSnapshot = await getDocs(collection(db, 'abogados'));
-      const procesadorasSnapshot = await getDocs(collection(db, 'procesadoras'));
-      const originadoresSnapshot = await getDocs(collection(db, 'originadores'));
+      try {
+        const abogadosSnapshot = await getDocs(collection(db, 'abogados'));
+        const procesadorasSnapshot = await getDocs(collection(db, 'procesadoras'));
+        const originadoresSnapshot = await getDocs(collection(db, 'originadores'));
 
-      setAbogados(abogadosSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-      setProcesadoras(procesadorasSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-      setOriginadores(originadoresSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        setAbogados(abogadosSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        setProcesadoras(procesadorasSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        setOriginadores(originadoresSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      } catch (error) {
+        console.error("Error fetching data: ", error);
+        alert("Error al cargar los datos. Por favor, inténtelo de nuevo.");
+      }
     };
 
     fetchData();
   }, []);
 
-  const handleSubmit = async (e) => {
+  const [pdfLink, setPdfLink] = useState(null);
+
+  useEffect(() => {
+    if (selectedEvent && selectedEvent.extendedProps && selectedEvent.extendedProps.file) {
+      setPdfLink(selectedEvent.extendedProps.file);
+    }
+  }, [selectedEvent]);
+
+const handleSubmit = async (e) => {
     e.preventDefault();
 
     let fileData = null;
@@ -74,11 +94,21 @@ const LoanForm = ({ selectedDate, closeModal, isOpen, selectedEvent }) => {
 
         if (selectedEvent && selectedEvent.id) {
           const eventDoc = doc(db, 'events', selectedEvent.id);
-          await updateDoc(eventDoc, event);
-          alert('Evento actualizado exitosamente');
+          try {
+            await updateDoc(eventDoc, event);
+            alert('Evento actualizado exitosamente');
+          } catch (error) {
+            console.error("Error updating event: ", error);
+            alert("Error al actualizar el evento. Por favor, inténtelo de nuevo.");
+          }
         } else {
-          await addDoc(collection(db, 'events'), event);
-          alert('Evento creado exitosamente');
+          try {
+            await addDoc(collection(db, 'events'), event);
+            alert('Evento creado exitosamente');
+          } catch (error) {
+            console.error("Error creating event: ", error);
+            alert("Error al crear el evento. Por favor, inténtelo de nuevo.");
+          }
         }
 
         closeModal();
@@ -117,8 +147,13 @@ const LoanForm = ({ selectedDate, closeModal, isOpen, selectedEvent }) => {
   const handleDelete = async () => {
     if (selectedEvent) {
       const eventDoc = doc(db, 'events', selectedEvent.id);
-      await deleteDoc(eventDoc);
-      alert('Evento eliminado exitosamente');
+      try {
+        await deleteDoc(eventDoc);
+        alert('Evento eliminado exitosamente');
+      } catch (error) {
+        console.error("Error deleting event: ", error);
+        alert("Error al eliminar el evento. Por favor, inténtelo de nuevo.");
+      }
       closeModal();
     }
   };
@@ -132,22 +167,55 @@ const LoanForm = ({ selectedDate, closeModal, isOpen, selectedEvent }) => {
     }
   };
 
-  return (
-    <Modal open={isOpen} onClose={closeModal}>
+  const handleDrop = (e) => {
+    e.preventDefault();
+    const droppedFile = e.dataTransfer.files[0];
+    if (droppedFile && droppedFile.type === 'application/pdf') {
+      setFile(droppedFile);
+    } else {
+      alert('Por favor, arrastra un archivo PDF válido.');
+    }
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+  };
+
+
+  const [isModified, setIsModified] = useState(false);
+
+  const handleInputChange = (setter) => (e) => {
+    setter(e.target.value);
+    setIsModified(true);
+  };
+
+  const handleClose = () => {
+    if (isModified) {
+      if (window.confirm("¿Estás seguro de que deseas cerrar? Se perderán los datos no guardados.")) {
+        closeModal();
+      }
+    } else {
+      closeModal();
+    }
+  };
+
+return (
+    <Modal open={isOpen} onClose={handleClose}>
       <Box sx={{
         position: 'absolute',
         top: '50%',
         left: '50%',
         transform: 'translate(-50%, -50%)',
-        width: '400px',
+        width: { xs: '95%', sm: 'sm', md: 'md' }, // Ajuste de anchura responsive
+        maxWidth: 'md', // Anchura máxima para pantallas grandes
         bgcolor: 'background.paper',
         boxShadow: 24,
-        p: 4,
+        p: { xs: 2, sm: 3, md: 4 }, // Padding responsive
         borderRadius: 2,
-        maxHeight: '80vh',  // Limita la altura máxima
-        overflowY: 'auto'   // Activa el scroll vertical
+        maxHeight: '90vh',
+        overflowY: 'auto'
       }}>
-        <Typography variant="h6" component="h2" align="center" sx={{ mb: 2 }}>
+        <Typography variant="h6" component="h2" align="center" sx={{ mb: 3 }}>
           Crear Evento de Préstamo
         </Typography>
 
@@ -156,7 +224,7 @@ const LoanForm = ({ selectedDate, closeModal, isOpen, selectedEvent }) => {
             label="Número de Préstamo"
             type="text"
             value={loanNumber}
-            onChange={(e) => setLoanNumber(e.target.value)}
+            onChange={handleInputChange(setLoanNumber)}
             required
             fullWidth
             margin="normal"
@@ -167,7 +235,7 @@ const LoanForm = ({ selectedDate, closeModal, isOpen, selectedEvent }) => {
             label="Nombre del Cliente"
             type="text"
             value={clientName}
-            onChange={(e) => setClientName(e.target.value)}
+            onChange={handleInputChange(setClientName)}
             required
             fullWidth
             margin="normal"
@@ -178,7 +246,7 @@ const LoanForm = ({ selectedDate, closeModal, isOpen, selectedEvent }) => {
             label="Email del Cliente"
             type="email"
             value={clientEmail}
-            onChange={(e) => setClientEmail(e.target.value)}
+            onChange={handleInputChange(setClientEmail)}
             required
             fullWidth
             margin="normal"
@@ -188,7 +256,7 @@ const LoanForm = ({ selectedDate, closeModal, isOpen, selectedEvent }) => {
             label="Fecha de Inicio"
             type="date"
             value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
+            onChange={handleInputChange(setStartDate)}
             required
             fullWidth
             margin="normal"
@@ -201,7 +269,7 @@ const LoanForm = ({ selectedDate, closeModal, isOpen, selectedEvent }) => {
             label="Hora de Inicio"
             type="time"
             value={startTime}
-            onChange={(e) => setStartTime(e.target.value)}
+            onChange={handleInputChange(setStartTime)}
             required
             fullWidth
             margin="normal"
@@ -214,7 +282,7 @@ const LoanForm = ({ selectedDate, closeModal, isOpen, selectedEvent }) => {
             label="Fecha de Fin"
             type="date"
             value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
+            onChange={handleInputChange(setEndDate)}
             required
             fullWidth
             margin="normal"
@@ -227,7 +295,7 @@ const LoanForm = ({ selectedDate, closeModal, isOpen, selectedEvent }) => {
             label="Hora de Fin"
             type="time"
             value={endTime}
-            onChange={(e) => setEndTime(e.target.value)}
+            onChange={handleInputChange(setEndTime)}
             required
             fullWidth
             margin="normal"
@@ -240,7 +308,7 @@ const LoanForm = ({ selectedDate, closeModal, isOpen, selectedEvent }) => {
             label="Contribución"
             type="number"
             value={contribution}
-            onChange={(e) => setContribution(e.target.value)}
+            onChange={handleInputChange(setContribution)}
             step="0.01"
             fullWidth
             margin="normal"
@@ -250,7 +318,7 @@ const LoanForm = ({ selectedDate, closeModal, isOpen, selectedEvent }) => {
             <InputLabel>Abogado de Hipoteca</InputLabel>
             <Select
               value={selectedAbogado}
-              onChange={(e) => setSelectedAbogado(e.target.value)}
+              onChange={handleInputChange(setSelectedAbogado)}
               label="Abogado de Hipoteca"
             >
               <MenuItem value="">
@@ -265,11 +333,12 @@ const LoanForm = ({ selectedDate, closeModal, isOpen, selectedEvent }) => {
             <FormHelperText>Selecciona un abogado de la lista</FormHelperText>
           </FormControl>
 
-          <FormControl fullWidth margin="normal">
+
+<FormControl fullWidth margin="normal">
             <InputLabel>Procesadora</InputLabel>
             <Select
               value={selectedProcesadora}
-              onChange={(e) => setSelectedProcesadora(e.target.value)}
+              onChange={handleInputChange(setSelectedProcesadora)}
             >
               <MenuItem value="">
                 <em>Seleccione una procesadora</em>
@@ -286,7 +355,7 @@ const LoanForm = ({ selectedDate, closeModal, isOpen, selectedEvent }) => {
             <InputLabel>Originador</InputLabel>
             <Select
               value={selectedOriginador}
-              onChange={(e) => setSelectedOriginador(e.target.value)}
+              onChange={handleInputChange(setSelectedOriginador)}
             >
               <MenuItem value="">
                 <em>Seleccione un originador</em>
@@ -299,35 +368,68 @@ const LoanForm = ({ selectedDate, closeModal, isOpen, selectedEvent }) => {
             </Select>
           </FormControl>
 
-          <Typography variant="body2" color="textSecondary" sx={{ mt: 2 }}>
-          Closing Disclosure: 
-          </Typography>
-
-          <Button
-            variant="contained"
-            component="label"
-            fullWidth
-            sx={{ mt: 2 }}
+          <FormControl fullWidth margin="normal">
+          <InputLabel shrink htmlFor="upload-file">Closing Disclosure (PDF)</InputLabel>
+          <Box
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+            sx={{
+              border: '2px dashed #007BFF',
+              padding: '20px',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              cursor: 'pointer',
+              backgroundColor: '#f9f9f9',
+              marginTop: '20px',
+              '&:hover': {
+                backgroundColor: '#e6f7ff',
+                borderColor: '#0056b3'
+              }
+            }}
           >
-            Subir Archivo PDF
-            <input type="file" onChange={handleFileChange} accept="application/pdf" hidden />
-          </Button>
+            <input
+              id="upload-file"
+              type="file"
+              onChange={handleFileChange}
+              accept="application/pdf"
+              style={{ display: 'none' }}
+            />
+            <label htmlFor="upload-file" style={{ width: '100%', textAlign: 'center' }}>
+              {file ? file.name : 'Haz clic o arrastra un archivo PDF aquí'}
+            </label>
+            </Box>
+            
+          {pdfLink && ( 
+            <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center' }}>
+              <Typography variant="body2">
+        <a href="#" onClick={() => {
+          const newWindow = window.open();
+          newWindow.document.write(
+            `<iframe src="${pdfLink}" width="100%" height="100%"></iframe>`
+          );
+        }}>Ver PDF</a>
+              </Typography>
+            </Box>
+          )}
+          </FormControl>
           {/* Separador */}
-          <Box sx={{ height: 16 }} />
+          {/* Separador */}
+          <Box sx={{ height: 24 }} />
           {/* Linea separadora */}
-          <hr />
+          <Divider sx={{ mb: 2 }} />
           {/* Separador */}
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 3 }}>
-            {selectedEvent && (
-              <Button variant="contained" color="error" onClick={handleDelete} sx={{ width: '48%' }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-around', mt: 4 }}>
+            <Button onClick={handleClose} variant="outlined" color="inherit" startIcon={<CloseIcon />}>
+              Cancelar
+            </Button>
+            {selectedEvent.id && (
+              <Button color="error" variant="contained" onClick={handleDelete} startIcon={<DeleteIcon />}>
                 Eliminar
               </Button>
             )}
-            <Button variant="outlined" onClick={closeModal} sx={{ width: '48%' }}>
-              Cerrar
-            </Button>
-            <Button type="submit" variant="contained" sx={{ width: '48%' }}>
-              Enviar
+            <Button type="submit" color="primary" variant="contained" startIcon={<SaveIcon />}>
+              Guardar
             </Button>
           </Box>
         </form>
