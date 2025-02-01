@@ -7,7 +7,7 @@ import './Calendar.css';
 import LoanForm from './LoanForm';
 import { db } from './firebaseConfig';
 import { collection, getDocs, updateDoc, doc } from 'firebase/firestore';
-import { Modal, Box, Typography, Button } from '@mui/material';
+import { Modal, Box } from '@mui/material';
 
 const Calendar = () => {
   const [events, setEvents] = useState([]);
@@ -16,7 +16,13 @@ const Calendar = () => {
 
   const fetchEvents = async () => {
     const querySnapshot = await getDocs(collection(db, 'events'));
-    const eventsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const eventsData = querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      title: doc.data().title,
+      start: doc.data().start.toDate(),
+      end: doc.data().end.toDate(),
+      extendedProps: doc.data().extendedProps
+    }));
     setEvents(eventsData);
   };
 

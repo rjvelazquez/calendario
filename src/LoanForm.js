@@ -7,8 +7,10 @@ const LoanForm = ({ selectedDate, closeModal, isOpen }) => {
   const [loanNumber, setLoanNumber] = useState('');
   const [clientName, setClientName] = useState('');
   const [clientEmail, setClientEmail] = useState('');
-  const [closingDate, setClosingDate] = useState('');
-  const [closingTime, setClosingTime] = useState('');
+  const [startDate, setStartDate] = useState(selectedDate instanceof Date ? selectedDate.toISOString().slice(0, 10) : '');
+  const [startTime, setStartTime] = useState(new Date().toISOString().slice(11, 16));
+  const [endDate, setEndDate] = useState(selectedDate instanceof Date ? selectedDate.toISOString().slice(0, 10) : '');
+  const [endTime, setEndTime] = useState(new Date(new Date().getTime() + 60 * 60 * 1000).toISOString().slice(11, 16));
   const [contribution, setContribution] = useState('');
   const [abogados, setAbogados] = useState([]);
   const [procesadoras, setProcesadoras] = useState([]);
@@ -42,7 +44,8 @@ const LoanForm = ({ selectedDate, closeModal, isOpen }) => {
 
     const event = {
       title: `Préstamo: ${loanNumber} - ${clientName}`,
-      start: selectedDate,
+      start: new Date(`${startDate}T${startTime}`),
+      end: new Date(`${endDate}T${endTime}`),
       extendedProps: {
         loanNumber,
         clientName,
@@ -122,10 +125,10 @@ const LoanForm = ({ selectedDate, closeModal, isOpen }) => {
           />
 
           <TextField
-            label="Fecha de Cierre"
+            label="Fecha de Inicio"
             type="date"
-            value={closingDate}
-            onChange={(e) => setClosingDate(e.target.value)}
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
             required
             fullWidth
             margin="normal"
@@ -135,10 +138,36 @@ const LoanForm = ({ selectedDate, closeModal, isOpen }) => {
           />
 
           <TextField
-            label="Hora de Cierre"
+            label="Hora de Inicio"
             type="time"
-            value={closingTime}
-            onChange={(e) => setClosingTime(e.target.value)}
+            value={startTime}
+            onChange={(e) => setStartTime(e.target.value)}
+            required
+            fullWidth
+            margin="normal"
+            InputLabelProps={{
+              shrink: true,
+            }}
+          />
+
+          <TextField
+            label="Fecha de Fin"
+            type="date"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            required
+            fullWidth
+            margin="normal"
+            InputLabelProps={{
+              shrink: true,
+            }}
+          />
+
+          <TextField
+            label="Hora de Fin"
+            type="time"
+            value={endTime}
+            onChange={(e) => setEndTime(e.target.value)}
             required
             fullWidth
             margin="normal"
