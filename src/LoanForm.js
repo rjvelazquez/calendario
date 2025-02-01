@@ -5,9 +5,9 @@ import { Modal, Box, Typography, Button, TextField, MenuItem, Select, InputLabel
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
 
 const LoanForm = ({ selectedDate, closeModal, isOpen, selectedEvent }) => {
-  const [loanNumber, setLoanNumber] = useState(selectedEvent ? selectedEvent.extendedProps.loanNumber : '');
-  const [clientName, setClientName] = useState(selectedEvent ? selectedEvent.extendedProps.clientName : '');
-  const [clientEmail, setClientEmail] = useState(selectedEvent ? selectedEvent.extendedProps.clientEmail : '');
+  const [loanNumber, setLoanNumber] = useState(selectedEvent && selectedEvent.extendedProps ? selectedEvent.extendedProps.loanNumber : '');
+  const [clientName, setClientName] = useState(selectedEvent && selectedEvent.extendedProps ? selectedEvent.extendedProps.clientName : '');
+  const [clientEmail, setClientEmail] = useState(selectedEvent && selectedEvent.extendedProps ? selectedEvent.extendedProps.clientEmail : '');
   const [startDate, setStartDate] = useState(selectedEvent ? moment(selectedEvent.start).tz('America/Puerto_Rico').format('YYYY-MM-DD') : '');
   const [startTime, setStartTime] = useState(selectedEvent ? moment(selectedEvent.start).tz('America/Puerto_Rico').format('HH:mm') : '');
   const [endDate, setEndDate] = useState(selectedEvent ? moment(selectedEvent.end).tz('America/Puerto_Rico').format('YYYY-MM-DD') : '');
@@ -22,14 +22,15 @@ const LoanForm = ({ selectedDate, closeModal, isOpen, selectedEvent }) => {
       setEndTime(date.add(1, 'hour').format('HH:mm'));
     }
   }, [selectedDate]);
-  const [contribution, setContribution] = useState(selectedEvent ? selectedEvent.extendedProps.contribution : '');
+  const [contribution, setContribution] = useState(selectedEvent && selectedEvent.extendedProps ? selectedEvent.extendedProps.contribution : '');
   const [abogados, setAbogados] = useState([]);
   const [procesadoras, setProcesadoras] = useState([]);
   const [originadores, setOriginadores] = useState([]);
-  const [selectedAbogado, setSelectedAbogado] = useState(selectedEvent ? selectedEvent.extendedProps.abogado : '');
-  const [selectedProcesadora, setSelectedProcesadora] = useState(selectedEvent ? selectedEvent.extendedProps.procesadora : '');
-  const [selectedOriginador, setSelectedOriginador] = useState(selectedEvent ? selectedEvent.extendedProps.originador : '');
+  const [selectedAbogado, setSelectedAbogado] = useState(selectedEvent && selectedEvent.extendedProps ? selectedEvent.extendedProps.abogado : '');
+  const [selectedProcesadora, setSelectedProcesadora] = useState(selectedEvent && selectedEvent.extendedProps ? selectedEvent.extendedProps.procesadora : '');
+  const [selectedOriginador, setSelectedOriginador] = useState(selectedEvent && selectedEvent.extendedProps ? selectedEvent.extendedProps.originador : '');
   const [file, setFile] = useState(null);
+  const [fileLoaded, setFileLoaded] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -48,37 +49,69 @@ const LoanForm = ({ selectedDate, closeModal, isOpen, selectedEvent }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!file) {
-      alert('Debe adjuntar un archivo PDF.');
-      return;
-    }
+    let fileData = null;
 
-    const event = {
-      title: `Préstamo: ${loanNumber} - ${clientName}`,
-      start: new Date(`${startDate}T${startTime}`),
-      end: new Date(`${endDate}T${endTime}`),
-      extendedProps: {
-        loanNumber,
-        clientName,
-        clientEmail,
-        contribution,
-        abogado: selectedAbogado,
-        procesadora: selectedProcesadora,
-        originador: selectedOriginador,
-        file: file ? file.name : null
-      }
-    };
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        fileData = reader.result;
 
-    if (selectedEvent) {
-      const eventDoc = doc(db, 'events', selectedEvent.id);
-      await updateDoc(eventDoc, event);
-      alert('Evento actualizado exitosamente');
+        const event = {
+          title: `Préstamo: ${loanNumber} - ${clientName}`,
+          start: new Date(`${startDate}T${startTime}`),
+          end: new Date(`${endDate}T${endTime}`),
+          extendedProps: {
+            loanNumber,
+            clientName,
+            clientEmail,
+            contribution,
+            abogado: selectedAbogado,
+            procesadora: selectedProcesadora,
+            originador: selectedOriginador,
+            file: fileData
+          }
+        };
+
+        if (selectedEvent && selectedEvent.id) {
+          const eventDoc = doc(db, 'events', selectedEvent.id);
+          await updateDoc(eventDoc, event);
+          alert('Evento actualizado exitosamente');
+        } else {
+          await addDoc(collection(db, 'events'), event);
+          alert('Evento creado exitosamente');
+        }
+
+        closeModal();
+      };
+      reader.readAsDataURL(file);
     } else {
-      await addDoc(collection(db, 'events'), event);
-      alert('Evento creado exitosamente');
-    }
+      const event = {
+        title: `Préstamo: ${loanNumber} - ${clientName}`,
+        start: new Date(`${startDate}T${startTime}`),
+        end: new Date(`${endDate}T${endTime}`),
+        extendedProps: {
+          loanNumber,
+          clientName,
+          clientEmail,
+          contribution,
+          abogado: selectedAbogado,
+          procesadora: selectedProcesadora,
+          originador: selectedOriginador,
+          file: null
+        }
+      };
 
-    closeModal();
+      if (selectedEvent && selectedEvent.id) {
+        const eventDoc = doc(db, 'events', selectedEvent.id);
+        await updateDoc(eventDoc, event);
+        alert('Evento actualizado exitosamente');
+      } else {
+        await addDoc(collection(db, 'events'), event);
+        alert('Evento creado exitosamente');
+      }
+
+      closeModal();
+    }
   };
 
   const handleDelete = async () => {
