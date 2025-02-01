@@ -1,6 +1,8 @@
 import React from 'react';
+import AdminPanel from './AdminPanel';
 import Calendar from './Calendar';
 import './App.css';
+import LoanForm from './LoanForm';
 
 function App() {
   return (
@@ -9,6 +11,8 @@ function App() {
         <h1>Agenda</h1>
       </header>
       <Calendar />
+      <LoanForm />
+      <AdminPanel />
     </div>
   );
 }
