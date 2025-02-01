@@ -30,8 +30,8 @@ const Calendar = () => {
   const handleDateClick = (arg) => {
     setSelectedEvent({
       title: '',
-      start: arg.date,
-      end: arg.date,
+      start: arg.dateStr,
+      end: arg.dateStr,
       allDay: true,
     });
     setEventModalIsOpen(true);
