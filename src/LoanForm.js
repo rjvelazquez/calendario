@@ -2,16 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { db } from './firebaseConfig';
 import moment from 'moment-timezone';
 import { Modal, Box, Typography, Button, TextField, MenuItem, Select, InputLabel, FormControl, FormHelperText } from '@mui/material';
-import { collection, getDocs, addDoc } from 'firebase/firestore';
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
 
-const LoanForm = ({ selectedDate, closeModal, isOpen }) => {
-  const [loanNumber, setLoanNumber] = useState('');
-  const [clientName, setClientName] = useState('');
-  const [clientEmail, setClientEmail] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [startTime, setStartTime] = useState('');
-  const [endDate, setEndDate] = useState('');
-  const [endTime, setEndTime] = useState('');
+const LoanForm = ({ selectedDate, closeModal, isOpen, selectedEvent }) => {
+  const [loanNumber, setLoanNumber] = useState(selectedEvent ? selectedEvent.extendedProps.loanNumber : '');
+  const [clientName, setClientName] = useState(selectedEvent ? selectedEvent.extendedProps.clientName : '');
+  const [clientEmail, setClientEmail] = useState(selectedEvent ? selectedEvent.extendedProps.clientEmail : '');
+  const [startDate, setStartDate] = useState(selectedEvent ? moment(selectedEvent.start).tz('America/Puerto_Rico').format('YYYY-MM-DD') : '');
+  const [startTime, setStartTime] = useState(selectedEvent ? moment(selectedEvent.start).tz('America/Puerto_Rico').format('HH:mm') : '');
+  const [endDate, setEndDate] = useState(selectedEvent ? moment(selectedEvent.end).tz('America/Puerto_Rico').format('YYYY-MM-DD') : '');
+  const [endTime, setEndTime] = useState(selectedEvent ? moment(selectedEvent.end).tz('America/Puerto_Rico').format('HH:mm') : '');
 
   useEffect(() => {
     if (selectedDate) {
@@ -22,13 +22,13 @@ const LoanForm = ({ selectedDate, closeModal, isOpen }) => {
       setEndTime(date.add(1, 'hour').format('HH:mm'));
     }
   }, [selectedDate]);
-  const [contribution, setContribution] = useState('');
+  const [contribution, setContribution] = useState(selectedEvent ? selectedEvent.extendedProps.contribution : '');
   const [abogados, setAbogados] = useState([]);
   const [procesadoras, setProcesadoras] = useState([]);
   const [originadores, setOriginadores] = useState([]);
-  const [selectedAbogado, setSelectedAbogado] = useState('');
-  const [selectedProcesadora, setSelectedProcesadora] = useState('');
-  const [selectedOriginador, setSelectedOriginador] = useState('');
+  const [selectedAbogado, setSelectedAbogado] = useState(selectedEvent ? selectedEvent.extendedProps.abogado : '');
+  const [selectedProcesadora, setSelectedProcesadora] = useState(selectedEvent ? selectedEvent.extendedProps.procesadora : '');
+  const [selectedOriginador, setSelectedOriginador] = useState(selectedEvent ? selectedEvent.extendedProps.originador : '');
   const [file, setFile] = useState(null);
 
   useEffect(() => {
@@ -69,9 +69,25 @@ const LoanForm = ({ selectedDate, closeModal, isOpen }) => {
       }
     };
 
-    await addDoc(collection(db, 'events'), event);
-    alert('Evento creado exitosamente');
+    if (selectedEvent) {
+      const eventDoc = doc(db, 'events', selectedEvent.id);
+      await updateDoc(eventDoc, event);
+      alert('Evento actualizado exitosamente');
+    } else {
+      await addDoc(collection(db, 'events'), event);
+      alert('Evento creado exitosamente');
+    }
+
     closeModal();
+  };
+
+  const handleDelete = async () => {
+    if (selectedEvent) {
+      const eventDoc = doc(db, 'events', selectedEvent.id);
+      await deleteDoc(eventDoc);
+      alert('Evento eliminado exitosamente');
+      closeModal();
+    }
   };
 
   const handleFileChange = (e) => {
@@ -269,6 +285,11 @@ const LoanForm = ({ selectedDate, closeModal, isOpen }) => {
           <hr />
           {/* Separador */}
           <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 3 }}>
+            {selectedEvent && (
+              <Button variant="contained" color="error" onClick={handleDelete} sx={{ width: '48%' }}>
+                Eliminar
+              </Button>
+            )}
             <Button variant="outlined" onClick={closeModal} sx={{ width: '48%' }}>
               Cerrar
             </Button>
