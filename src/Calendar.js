@@ -4,6 +4,7 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import './Calendar.css';
+import moment from 'moment-timezone';
 import LoanForm from './LoanForm';
 import { db } from './firebaseConfig';
 import { collection, getDocs, updateDoc, doc } from 'firebase/firestore';
@@ -34,10 +35,11 @@ const Calendar = () => {
   const closeEventModal = () => setEventModalIsOpen(false);
 
   const handleDateClick = (arg) => {
+    const currentDateTime = moment().tz('America/Puerto_Rico').format();
     setSelectedEvent({
       title: '',
-      start: arg.dateStr,
-      end: arg.dateStr,
+      start: currentDateTime,
+      end: currentDateTime,
       allDay: true,
     });
     setEventModalIsOpen(true);

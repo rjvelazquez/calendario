@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db } from './firebaseConfig';
+import moment from 'moment-timezone';
 import { Modal, Box, Typography, Button, TextField, MenuItem, Select, InputLabel, FormControl, FormHelperText } from '@mui/material';
 import { collection, getDocs, addDoc } from 'firebase/firestore';
 
@@ -7,10 +8,20 @@ const LoanForm = ({ selectedDate, closeModal, isOpen }) => {
   const [loanNumber, setLoanNumber] = useState('');
   const [clientName, setClientName] = useState('');
   const [clientEmail, setClientEmail] = useState('');
-  const [startDate, setStartDate] = useState(selectedDate instanceof Date ? selectedDate.toISOString().slice(0, 10) : '');
-  const [startTime, setStartTime] = useState(new Date().toISOString().slice(11, 16));
-  const [endDate, setEndDate] = useState(selectedDate instanceof Date ? selectedDate.toISOString().slice(0, 10) : '');
-  const [endTime, setEndTime] = useState(new Date(new Date().getTime() + 60 * 60 * 1000).toISOString().slice(11, 16));
+  const [startDate, setStartDate] = useState('');
+  const [startTime, setStartTime] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [endTime, setEndTime] = useState('');
+
+  useEffect(() => {
+    if (selectedDate) {
+      const date = moment(selectedDate).tz('America/Puerto_Rico');
+      setStartDate(date.format('YYYY-MM-DD'));
+      setStartTime(date.format('HH:mm'));
+      setEndDate(date.format('YYYY-MM-DD'));
+      setEndTime(date.add(1, 'hour').format('HH:mm'));
+    }
+  }, [selectedDate]);
   const [contribution, setContribution] = useState('');
   const [abogados, setAbogados] = useState([]);
   const [procesadoras, setProcesadoras] = useState([]);
