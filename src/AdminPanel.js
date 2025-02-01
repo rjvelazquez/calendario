@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { db } from './firebaseConfig';
 import { collection, addDoc, getDocs, updateDoc, deleteDoc, doc } from 'firebase/firestore';
+import { TextField, Button, Select, MenuItem, FormControl, InputLabel, Typography, Box } from '@mui/material';
 
 const AdminPanel = () => {
   const [entries, setEntries] = useState({ abogados: [], procesadoras: [], originadores: [] });
@@ -54,40 +55,47 @@ const AdminPanel = () => {
   return (
     <div>
       <h1>Admin Panel</h1>
-      <div>
-        <input
-          type="text"
+      <Box component="form" sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <TextField
+          label="Nombre"
           name="name"
           value={newEntry.name}
           onChange={handleInputChange}
-          placeholder="Nombre"
         />
-        <input
-          type="email"
+        <TextField
+          label="Email"
           name="email"
           value={newEntry.email}
           onChange={handleInputChange}
-          placeholder="Email"
         />
-        <select name="category" value={newEntry.category} onChange={handleInputChange}>
-          <option value="abogados">Abogados de Hipoteca</option>
-          <option value="procesadoras">Procesadoras</option>
-          <option value="originadores">Originadores</option>
-        </select>
-        <button onClick={handleAddEntry}>Agregar</button>
-      </div>
+        <FormControl>
+          <InputLabel>Categoría</InputLabel>
+          <Select
+            name="category"
+            value={newEntry.category}
+            onChange={handleInputChange}
+          >
+            <MenuItem value="abogados">Abogados de Hipoteca</MenuItem>
+            <MenuItem value="procesadoras">Procesadoras</MenuItem>
+            <MenuItem value="originadores">Originadores</MenuItem>
+          </Select>
+        </FormControl>
+        <Button variant="contained" onClick={handleAddEntry}>Agregar</Button>
+      </Box>
       {['abogados', 'procesadoras', 'originadores'].map(category => (
         <div key={category}>
-          <h2>{category.charAt(0).toUpperCase() + category.slice(1)}</h2>
-          <ul>
-            {entries[category].map(entry => (
-              <li key={entry.id}>
-                {entry.name} ({entry.email})
-                <button onClick={() => handleEditEntry(category, entry.id, { name: 'Nuevo Nombre', email: 'nuevoemail@example.com' })}>Editar</button>
-                <button onClick={() => handleDeleteEntry(category, entry.id)}>Eliminar</button>
-              </li>
-            ))}
-          </ul>
+          <Typography variant="h6" component="h2">
+            {category.charAt(0).toUpperCase() + category.slice(1)}
+          </Typography>
+          {entries[category].map(entry => (
+            <Box key={entry.id} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Typography>{entry.name} ({entry.email})</Typography>
+              <Box>
+                <Button variant="outlined" onClick={() => handleEditEntry(category, entry.id, { name: 'Nuevo Nombre', email: 'nuevoemail@example.com' })}>Editar</Button>
+                <Button variant="outlined" color="error" onClick={() => handleDeleteEntry(category, entry.id)}>Eliminar</Button>
+              </Box>
+            </Box>
+          ))}
         </div>
       ))}
     </div>

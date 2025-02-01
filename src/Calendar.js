@@ -11,8 +11,8 @@ import { Modal, Box, Typography, Button } from '@mui/material';
 
 const Calendar = () => {
   const [events, setEvents] = useState([]);
-  const [modalIsOpen, setModalIsOpen] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(null);
+  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [eventModalIsOpen, setEventModalIsOpen] = useState(false);
 
   const fetchEvents = async () => {
     const querySnapshot = await getDocs(collection(db, 'events'));
@@ -20,24 +20,25 @@ const Calendar = () => {
     setEvents(eventsData);
   };
 
-  const openModal = (date) => {
-    setSelectedDate(date);
-    setModalIsOpen(true);
+  const openEventModal = (event) => {
+    setSelectedEvent(event);
+    setEventModalIsOpen(true);
   };
 
-  const closeModal = () => setModalIsOpen(false);
+  const closeEventModal = () => setEventModalIsOpen(false);
 
   const handleDateClick = (arg) => {
-    openModal(arg.date);
+    setSelectedEvent({
+      title: '',
+      start: arg.date,
+      end: arg.date,
+      allDay: true,
+    });
+    setEventModalIsOpen(true);
   };
 
-  const handleEventClick = async (info) => {
-    const newTitle = prompt('Edit event title:', info.event.title);
-    if (newTitle) {
-      const eventDoc = doc(db, 'events', info.event.id);
-      await updateDoc(eventDoc, { title: newTitle });
-      info.event.setProp('title', newTitle);
-    }
+  const handleEventClick = (info) => {
+    openEventModal(info.event);
   };
 
   const handleEventDrop = async (info) => {
@@ -62,19 +63,15 @@ const Calendar = () => {
           right: 'dayGridMonth,timeGridWeek,timeGridDay'
         }}
         events={events}
-        dateClick={handleDateClick}
         eventClick={handleEventClick}
+        dateClick={handleDateClick}
         eventDrop={handleEventDrop}
         editable={true}
         droppable={true}
       />
-      <Modal open={modalIsOpen} onClose={closeModal}>
+      <Modal open={eventModalIsOpen} onClose={closeEventModal}>
         <Box sx={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: 400, bgcolor: 'background.paper', boxShadow: 24, p: 4 }}>
-          <Typography variant="h6" component="h2">
-            Agregar Evento
-          </Typography>
-          <LoanForm selectedDate={selectedDate} closeModal={closeModal} isOpen={modalIsOpen} />
-          <Button onClick={closeModal}>Cerrar</Button>
+          <LoanForm selectedDate={selectedEvent ? selectedEvent.start : null} closeModal={closeEventModal} isOpen={eventModalIsOpen} />
         </Box>
       </Modal>
     </>

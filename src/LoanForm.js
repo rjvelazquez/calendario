@@ -214,7 +214,6 @@ const LoanForm = ({ selectedDate, closeModal, isOpen }) => {
           Closing Disclosure: 
           </Typography>
 
-
           <Button
             variant="contained"
             component="label"
